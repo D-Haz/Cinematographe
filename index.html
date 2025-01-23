@@ -3,281 +3,346 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cinematic Movie Connections</title>
+    <title>Cinématographe</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@900&family=Space+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@700&family=Major+Mono+Display&family=Courier+Prime&display=swap');
 
-        @keyframes reel {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        :root {
+            --neon-glow: 0 0 10px rgba(255,255,255,0.3),
+                         0 0 20px rgba(255,255,255,0.2),
+                         0 0 30px rgba(255,255,255,0.1);
         }
 
-        @keyframes vignette-pulse {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 0.9; }
+        @keyframes filmNoise {
+            0%, 100% { opacity: 0.05; }
+            10% { opacity: 0.08; }
+            30% { opacity: 0.04; }
+            50% { opacity: 0.07; }
+            70% { opacity: 0.03; }
+            90% { opacity: 0.06; }
         }
 
-        @keyframes grain {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            25% { transform: translate(10%, -5%) scale(1.1); }
-            50% { transform: translate(-5%, 10%) scale(0.95); }
-            75% { transform: translate(5%, -10%) scale(1.05); }
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        @keyframes textGlitch {
+            0%, 100% { transform: translate(0); }
+            5%, 15% { transform: translate(-2px, 2px); }
+            10%, 20% { transform: translate(2px, -2px); }
+        }
+
+        @keyframes fade {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.3; }
         }
 
         body {
-            background: #080808;
+            background: #000;
             color: white;
+            font-family: 'Courier Prime', monospace;
             margin: 0;
             overflow-x: hidden;
+            min-height: 100vh;
         }
 
-        .grain-overlay::before {
-            content: '';
-            position: fixed;
-            inset: -200%;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj4KICA8ZmlsdGVyIGlkPSJub2lzZSI+CiAgICA8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC42NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPgogIDwvZmlsdGVyPgogIDxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjA1Ii8+Cjwvc3ZnPg==');
-            pointer-events: none;
-            animation: grain 8s steps(10) infinite;
-            opacity: 0.05;
-            z-index: 1;
-        }
-
-        .vignette::after {
-            content: '';
+        /* Film grain effect */
+        .film-grain {
             position: fixed;
             inset: 0;
-            background: radial-gradient(circle, transparent 40%, #000 140%);
-            animation: vignette-pulse 4s infinite;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.07;
+            animation: filmNoise 0.5s steps(1) infinite;
             pointer-events: none;
-            z-index: 2;
+            z-index: 1000;
         }
 
-        .reel-spinner {
-            animation: reel 4s linear infinite;
+        /* Scanline effect */
+        .scanline {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                transparent 50%,
+                rgba(255, 255, 255, 0.02) 50%
+            );
+            background-size: 100% 4px;
+            animation: scanline 10s linear infinite;
+            pointer-events: none;
+            z-index: 999;
         }
 
-        .title-text {
-            font-family: 'Playfair Display', serif;
-            background: linear-gradient(45deg, #fff 30%, #888 70%);
-            -webkit-background-clip: text;
-            background-clip: text;
+        /* Enhanced glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
 
-        .mono-text {
-            font-family: 'Space Mono', monospace;
+        .glass:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
-        .film-frame {
-            border: 1px solid;
-            border-image: linear-gradient(45deg, #ffffff22, #ffffff00) 1;
+        /* Title styles */
+        .cinema-title {
+            font-family: 'Bodoni Moda', serif;
+            letter-spacing: 0.2em;
+            animation: textGlitch 10s infinite;
+            text-shadow: var(--neon-glow);
+        }
+
+        .mono-title {
+            font-family: 'Major Mono Display', monospace;
+            letter-spacing: 0.5em;
+        }
+
+        /* Graph elements */
+        .link2 {
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 1;
+            stroke-dasharray: 4 2;
         }
 
         .link {
             stroke: rgba(255, 255, 255, 0.3);
             stroke-dasharray: 5;
+            animation: dash 20s linear infinite;
         }
 
-        .glassmorphism {
+        .node-circle {
+            stroke: rgba(255, 255, 255, 0.3);
+            filter: drop-shadow(var(--neon-glow));
+        }
+
+        /* Search results card */
+        .result-card {
+            transform-style: preserve-3d;
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px) rotateX(2deg);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .context-menu {
-            background: rgba(0, 0, 0, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
         }
 
-        .context-menu li {
-            padding: 8px 16px;
-            cursor: pointer;
-        }
-
-        .context-menu li:hover {
-            background: rgba(255, 255, 255, 0.1);
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 1000;
+            }
         }
     </style>
 </head>
-<body>
-    <div class="grain-overlay"></div>
-    <div class="vignette"></div>
+<body class="relative">
+    <div class="film-grain"></div>
+    <div class="scanline"></div>
 
-    <div class="container mx-auto p-4">
+    <!-- Cinematic gradient background -->
+    <div class="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-50 z-0"></div>
+
+    <div class="container mx-auto px-4 relative z-10">
         <!-- Title Section -->
-        <div class="text-center mb-8">
-            <h1 class="title-text text-6xl font-black mb-2">
-                The Big Pictures
-            </h1>
-            <p class="mono-text text-gray-400 text-lg">Have fun Mein Schatz</p>
-        </div>
+        <header class="text-center py-12">
+            <h1 class="cinema-title text-6xl mb-2">CINÉMATOGRAPHE</h1>
+            <p class="mono-title text-sm text-gray-400 tracking-widest">CONNECTING THE FRAMES</p>
+        </header>
 
-        <!-- Search Bar -->
-        <div class="flex justify-center mb-8 relative">
-            <input id="search-bar" type="text" 
-                placeholder="Search movies, actors, or directors..."
-                class="w-2/3 glassmorphism rounded-full px-8 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-white/50">
-            <button id="search-button" 
-                class="absolute right-[17%] top-1/2 -translate-y-1/2 px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all">
-                Search
-            </button>
+        <!-- Search Section -->
+        <div class="max-w-3xl mx-auto mb-12">
+            <div class="glass rounded-full relative overflow-hidden group">
+                <input id="search-bar" type="text" 
+                    placeholder="DISCOVER CONNECTIONS..."
+                    class="w-full bg-transparent px-8 py-6 text-lg focus:outline-none placeholder:text-gray-500">
+                <button id="search-button" 
+                    class="absolute right-4 top-1/2 -translate-y-1/2 px-6 py-2 glass rounded-full opacity-70 hover:opacity-100 transition-all">
+                    SEARCH
+                </button>
+            </div>
         </div>
 
         <!-- Graph Container -->
-        <div id="graph-container" class="film-frame bg-black/30 h-[70vh] mb-8 relative overflow-hidden">
-            <div class="absolute top-4 right-4 flex space-x-2 z-10">
-                <button id="zoom-in" class="p-3 glassmorphism rounded-full hover:bg-white/10 transition-all">+</button>
-                <button id="zoom-out" class="p-3 glassmorphism rounded-full hover:bg-white/10 transition-all">-</button>
-                <button id="reset-view" class="p-3 glassmorphism rounded-full hover:bg-white/10 transition-all">↺</button>
+        <div id="graph-container" class="glass rounded-3xl h-[70vh] mb-12 relative overflow-hidden">
+            <!-- Graph controls -->
+            <div class="absolute top-6 right-6 flex space-x-3 z-20">
+                <button id="zoom-in" class="p-4 glass rounded-full hover:bg-white/10 transition-all">+</button>
+                <button id="zoom-out" class="p-4 glass rounded-full hover:bg-white/10 transition-all">-</button>
+                <button id="reset-view" class="p-4 glass rounded-full hover:bg-white/10 transition-all">↺</button>
             </div>
+            
             <svg id="graph-svg"></svg>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex justify-center space-x-6 mb-8">
+        <!-- Control Bar -->
+        <div class="flex justify-center space-x-6 mb-12">
             <button id="verify-button" 
-                class="px-8 py-3 glassmorphism rounded-full hover:bg-white/10 transition-all">
-                Verify Connections
+                class="px-8 py-4 glass rounded-full hover:bg-white/10 transition-all">
+                VERIFY CONNECTIONS
             </button>
             <button id="clear-button"
-                class="px-8 py-3 glassmorphism rounded-full hover:bg-white/10 transition-all">
-                Clear Board
+                class="px-8 py-4 glass rounded-full hover:bg-white/10 transition-all">
+                CLEAR CANVAS
             </button>
             <button id="restart-button"
-                class="px-8 py-3 glassmorphism rounded-full hover:bg-white/10 transition-all">
-                Restart Game
+                class="px-8 py-4 glass rounded-full hover:bg-white/10 transition-all">
+                NEW SCENE
             </button>
         </div>
 
         <!-- Search Results -->
-        <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-
-        <!-- Context Menu -->
-        <div id="context-menu" class="hidden absolute context-menu rounded-xl z-50">
-            <ul>
-                <li id="connect-node">Connect</li>
-                <li id="delete-node">Delete</li>
-            </ul>
+        <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Results will be dynamically inserted here -->
         </div>
     </div>
 
+    <!-- Context Menu -->
+    <div id="context-menu" class="hidden absolute glass rounded-xl z-50 overflow-hidden">
+        <ul class="py-2">
+            <li id="connect-node" class="px-6 py-3 hover:bg-white/10 cursor-pointer transition-all">CONNECT</li>
+            <li id="delete-node" class="px-6 py-3 hover:bg-white/10 cursor-pointer transition-all">DELETE</li>
+        </ul>
+    </div>
+
     <script>
-        const TMDB_API_KEY = "dc90ecfc8713216c67ff4170bbb02591";
+         const TMDB_API_KEY = "dc90ecfc8713216c67ff4170bbb02591";
 
-        let nodes = [];
-        let links = [];
-        let selectedNode = null;
-        let connecting = false;
+let nodes = [];
+let links = [];
+let selectedNode = null;
+let connecting = false;
 
-        const svg = d3.select("#graph-svg")
-            .attr("width", "100%")
-            .attr("height", "100%");
+const svg = d3.select("#graph-svg")
+    .attr("width", "100%")
+    .attr("height", "100%");
 
-        // Initialize zoom behavior
-        const zoom = d3.zoom()
-            .scaleExtent([0.2, 2])
-            .on("zoom", (event) => {
-                container.attr("transform", event.transform);
-            });
+// Initialize zoom behavior
+const zoom = d3.zoom()
+    .scaleExtent([0.2, 2])
+    .on("zoom", (event) => {
+        container.attr("transform", event.transform);
+    });
 
-        svg.call(zoom);
-        const container = svg.append("g");
+svg.call(zoom);
+const container = svg.append("g");
 
-        const simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links).id(d => d.id).distance(150))
-            .force("charge", d3.forceManyBody().strength(-300))
-            .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
-            .on("tick", ticked);
+const simulation = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+    .force("charge", d3.forceManyBody().strength(-300))
+    .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+    .on("tick", ticked);
 
-                // New function to fetch a random popular actor
-                async function getRandomPopularActor() {
-            console.log("Fetching random popular actor...");
-            const response = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${Math.floor(Math.random() * 10) + 1}`);
-            const data = await response.json();
-            const nonAdultActors = data.results.filter(actor => !actor.adult); // Filter out adult actors
-            if (nonAdultActors.length === 0) {
-                console.log("No non-adult actors found.");
-                return null;
-            }
-            const randomIndex = Math.floor(Math.random() * nonAdultActors.length);
-            console.log("Fetched actors:", nonAdultActors);
-            return nonAdultActors[randomIndex];
-        }
+        // New function to fetch a random popular actor
+        async function getRandomPopularActor() {
+    console.log("Fetching random popular actor...");
+    const response = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${Math.floor(Math.random() * 10) + 1}`);
+    const data = await response.json();
+    const nonAdultActors = data.results.filter(actor => !actor.adult); // Filter out adult actors
+    if (nonAdultActors.length === 0) {
+        console.log("No non-adult actors found.");
+        return null;
+    }
+    const randomIndex = Math.floor(Math.random() * nonAdultActors.length);
+    console.log("Fetched actors:", nonAdultActors);
+    return nonAdultActors[randomIndex];
+}
 
-        async function startGame() {
-            // Clear existing nodes and links
-            nodes = [];
-            links = [];
-            updateGraph();
+async function startGame() {
+    // Clear existing nodes and links
+    nodes = [];
+    links = [];
+    updateGraph();
 
-            // Fetch two random popular actors
-            const actor1 = await getRandomPopularActor();
-            const actor2 = await getRandomPopularActor();
+    // Fetch two random popular actors
+    const actor1 = await getRandomPopularActor();
+    const actor2 = await getRandomPopularActor();
 
-            if (actor1) {
-                console.log("Selected actor 1:", actor1.name);
-                const randomActorNode1 = {
-                    id: actor1.id,
-                    type: 'person',
-                    label: actor1.name,
-                    image: `https://image.tmdb.org/t/p/w92${actor1.profile_path}`
-                };
-                // Add the first selected random actor as a node
-                addNode(randomActorNode1);
-                console.log("Added actor 1 to graph:", randomActorNode1);
-            } else {
-                console.log("No actor 1 found.");
-            }
+    if (actor1) {
+        console.log("Selected actor 1:", actor1.name);
+        const randomActorNode1 = {
+            id: actor1.id,
+            type: 'person',
+            label: actor1.name,
+            image: `https://image.tmdb.org/t/p/w92${actor1.profile_path}`
+        };
+        // Add the first selected random actor as a node
+        addNode(randomActorNode1);
+        console.log("Added actor 1 to graph:", randomActorNode1);
+    } else {
+        console.log("No actor 1 found.");
+    }
 
-            if (actor2) {
-                console.log("Selected actor 2:", actor2.name);
-                const randomActorNode2 = {
-                    id: actor2.id,
-                    type: 'person',
-                    label: actor2.name,
-                    image: `https://image.tmdb.org/t/p/w92${actor2.profile_path}`
-                };
-                // Add the second selected random actor as a node
-                addNode(randomActorNode2);
-                console.log("Added actor 2 to graph:", randomActorNode2);
-            } else {
-                console.log("No actor 2 found.");
-            }
+    if (actor2) {
+        console.log("Selected actor 2:", actor2.name);
+        const randomActorNode2 = {
+            id: actor2.id,
+            type: 'person',
+            label: actor2.name,
+            image: `https://image.tmdb.org/t/p/w92${actor2.profile_path}`
+        };
+        // Add the second selected random actor as a node
+        addNode(randomActorNode2);
+        console.log("Added actor 2 to graph:", randomActorNode2);
+    } else {
+        console.log("No actor 2 found.");
+    }
 
-            updateGraph();
-        }
+    updateGraph();
+}
 
-        async function fetchResults(query) {
-            const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
-            const response = await fetch(url);
-            const data = await response.json();
-            return data.results;
-        }
+async function fetchResults(query) {
+    const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.results;
+}
 
+        // Modified function to render search results with enhanced styling
         function renderResults(results) {
             const resultsContainer = document.getElementById('results');
             resultsContainer.innerHTML = '';
+            
             results.forEach(item => {
                 if (!item.poster_path && !item.profile_path) return;
                 
                 const resultCard = document.createElement('div');
-                resultCard.classList.add('glassmorphism', 'rounded-xl', 'p-4', 'hover:bg-white/10', 'transition-all');
+                resultCard.className = 'result-card glass rounded-xl p-6 group';
                 resultCard.innerHTML = `
-                    <div class="flex items-center space-x-4">
-                        <img src="https://image.tmdb.org/t/p/w92${item.poster_path || item.profile_path}" 
-                            alt="${item.title || item.name}"
-                            class="w-16 h-16 rounded-lg object-cover">
-                        <div class="flex-1">
-                            <h3 class="font-medium">${item.title || item.name}</h3>
-                            <p class="text-sm opacity-70">${item.media_type}</p>
+                    <div class="flex items-center space-x-6">
+                        <div class="relative w-20 h-20 rounded-lg overflow-hidden">
+                            <img 
+                                src="https://image.tmdb.org/t/p/w92${item.poster_path || item.profile_path}"
+                                alt="${item.title || item.name}"
+                                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            />
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                         </div>
-                        <button class="add-button px-4 py-2 rounded-full glassmorphism hover:bg-white/10 transition-all"
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold truncate mb-1">${item.title || item.name}</h3>
+                            <p class="text-sm text-gray-400">${item.media_type.toUpperCase()}</p>
+                        </div>
+                        <button 
+                            class="add-button px-5 py-3 glass rounded-full opacity-70 hover:opacity-100 transition-all"
                             data-id="${item.id}" 
                             data-type="${item.media_type}" 
                             data-label="${item.title || item.name}" 
                             data-image="${item.poster_path || item.profile_path}">
-                            Add
+                            ADD
                         </button>
                     </div>
                 `;
@@ -287,51 +352,53 @@
 
         let lastNodePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 }; // Initial position
 
-        function addNode(item) {
-            // Check for duplicate nodes
-            const existingNode = nodes.find(node => node.id === item.id);
-            if (existingNode) {
-                console.log(`Node with ID ${item.id} already exists. Skipping addition.`);
-                return; // Skip adding the node if it already exists
-            }
+function addNode(item) {
+    // Check for duplicate nodes
+    const existingNode = nodes.find(node => node.id === item.id);
+    if (existingNode) {
+        console.log(`Node with ID ${item.id} already exists. Skipping addition.`);
+        return; // Skip adding the node if it already exists
+    }
 
-            // Set the position of the new node close to the last node
-            item.x = lastNodePosition.x + (Math.random() - 0.5) * 100; // Random offset
-            item.y = lastNodePosition.y + (Math.random() - 0.5) * 100; // Random offset
+    // Set the position of the new node close to the last node
+    item.x = lastNodePosition.x + (Math.random() - 0.5) * 100; // Random offset
+    item.y = lastNodePosition.y + (Math.random() - 0.5) * 100; // Random offset
 
-            nodes.push(item);
-            lastNodePosition = { x: item.x, y: item.y }; // Update last node position
-            console.log("Node added:", item);
-            updateGraph();
-        }
+    nodes.push(item);
+    lastNodePosition = { x: item.x, y: item.y }; // Update last node position
+    console.log("Node added:", item);
+    updateGraph();
+}
 
-        function addLink(source, target) {
-            // Check for duplicate connections
-            const existingLink = links.find(link => 
-                (link.source.id === source.id && link.target.id === target.id) ||
-                (link.source.id === target.id && link.target.id === source.id)
-            );
+function addLink(source, target) {
+    // Check for duplicate connections
+    const existingLink = links.find(link => 
+        (link.source.id === source.id && link.target.id === target.id) ||
+        (link.source.id === target.id && link.target.id === source.id)
+    );
 
-            if (existingLink) {
-                console.log(`Connection between ${source.label} and ${target.label} already exists. Skipping addition.`);
-                return; // Skip adding the link if it already exists
-            }
+    if (existingLink) {
+        console.log(`Connection between ${source.label} and ${target.label} already exists. Skipping addition.`);
+        return; // Skip adding the link if it already exists
+    }
 
-            links.push({ source, target });
-            console.log("Link added between:", source.label, "and", target.label);
-            updateGraph();
-        }
+    links.push({ source, target });
+    console.log("Link added between:", source.label, "and", target.label);
+    updateGraph();
+}
 
+        // Modified updateGraph function for enhanced node styling
         function updateGraph() {
-            // Links
+            // Links with animated dash array
             const link = container.selectAll(".link")
                 .data(links)
                 .join(
                     enter => enter.append("line")
                         .attr("class", "link")
+                        .attr("stroke-dasharray", "4 2")
                 );
 
-            // Nodes
+            // Nodes with enhanced styling
             const nodeGroups = container.selectAll(".node-group")
                 .data(nodes, d => d.id)
                 .join(
@@ -343,31 +410,39 @@
                                 .on("drag", dragged)
                                 .on("end", dragended));
 
+                        // Glowing circle background
                         group.append("circle")
-                            .attr("r", 30)
-                            .attr("fill", "rgba(255, 255, 255, 0.1)")
+                            .attr("r", 32)
+                            .attr("class", "node-circle")
+                            .attr("fill", "rgba(0, 0, 0, 0.5)")
                             .attr("stroke", "rgba(255, 255, 255, 0.3)")
                             .attr("stroke-width", 1);
 
+                        // Image with mask
                         group.append("image")
                             .attr("xlink:href", d => d.image)
-                            .attr("x", -20)
-                            .attr("y", -20)
-                            .attr("width", 40)
-                            .attr("height", 40)
-                            .attr("clip-path", "circle(20px at center)");
+                            .attr("x", -24)
+                            .attr("y", -24)
+                            .attr("width", 48)
+                            .attr("height", 48)
+                            .attr("clip-path", "circle(24px at center)");
 
+                        // Text label with better visibility
                         group.append("text")
                             .attr("x", 40)
                             .attr("y", 5)
-                            .text(d => d.label)
+                            .attr("class", "mono-title")
                             .attr("fill", "white")
-                            .attr("font-size", "12px");
+                            .attr("font-size", "12px")
+                            .attr("text-anchor", "start")
+                            .text(d => d.label);
 
-                        group.on("contextmenu", (event, d) => {
+                        
+                            group.on("contextmenu", (event, d) => {
                             event.preventDefault();
                             showContextMenu(event, d);
                         });
+
 
                         return group;
                     }
