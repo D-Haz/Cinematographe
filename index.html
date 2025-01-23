@@ -47,8 +47,8 @@
         }
 
         .gradient-bg {
-            background: linear-gradient(-45deg, #000000, #2C343F, #00b020, #2C343F,#F27405);
-            background-size: 200% 200%;
+            background: linear-gradient(-45deg, #00b020, #000000, #2C343F,#F27405);
+            background-size: 400% 400%;
             animation: gradientFlow 15s ease infinite;
         }
 
@@ -607,38 +607,43 @@
             });
 
             svg.on("click", (event) => {
-                const [x, y] = d3.pointer(event);
-                const transform = d3.zoomTransform(svg.node());
-                const adjustedX = (x - transform.x) / transform.k; // Adjust for zoom
-                const adjustedY = (y - transform.y) / transform.k; // Adjust for zoom
+    const [x, y] = d3.pointer(event);
+    const transform = d3.zoomTransform(svg.node());
+    const adjustedX = (x - transform.x) / transform.k; // Adjust for zoom
+    const adjustedY = (y - transform.y) / transform.k; // Adjust for zoom
 
-                const targetNode = nodes.find(node => {
-                    const dx = node.x - adjustedX;
-                    const dy = node.y - adjustedY;
-                    return Math.sqrt(dx * dx + dy * dy) < 30; // Check if the mouse is close to a node
-                });
+    const targetNode = nodes.find(node => {
+        const dx = node.x - adjustedX;
+        const dy = node.y - adjustedY;
+        return Math.sqrt(dx * dx + dy * dy) < 30; // Check if the mouse is close to a node
+    });
 
-                if (connecting && targetNode && targetNode !== selectedNode) {
-                    if ((selectedNode.type === 'person' && targetNode.type === 'movie') ||
-                        (selectedNode.type === 'movie' && targetNode.type === 'person')) {
-                        
-                        // Add the link to the links array
-                        addLink(selectedNode, targetNode);
-                        
-                        // Set the attributes of the temporary line to match the new link
-                        tempLine
-                            .attr("x1", selectedNode.x)
-                            .attr("y1", selectedNode.y)
-                            .attr("x2", targetNode.x)
-                            .attr("y2", targetNode.y);
-                    }
-                }
+    if (connecting) {
+        if (targetNode) {
+            if ((selectedNode.type === 'person' && targetNode.type === 'movie') ||
+                (selectedNode.type === 'movie' && targetNode.type === 'person')) {
                 
-                // Stop connecting
-                connecting = false; // Reset connecting state
-                svg.on("mousemove", null); // Remove mousemove event listener
-                svg.on("click", null); // Remove click event listener
-            });
+                // Add the link to the links array
+                addLink(selectedNode, targetNode);
+                
+                // Set the attributes of the temporary line to match the new link
+                tempLine
+                    .attr("x1", selectedNode.x)
+                    .attr("y1", selectedNode.y)
+                    .attr("x2", targetNode.x)
+                    .attr("y2", targetNode.y);
+            }
+        } else {
+            // If no target node is found, remove the temporary line
+            tempLine.remove();
+        }
+        
+        // Stop connecting
+        connecting = false; // Reset connecting state
+        svg.on("mousemove", null); // Remove mousemove event listener
+        svg.on("click", null); // Remove click event listener
+    }
+});
 
             // Add double-click event listener to the hit area
             hitArea.on("dblclick", () => {
