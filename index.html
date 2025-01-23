@@ -84,8 +84,13 @@
                 class="px-8 py-3 glassmorphism rounded-full hover:bg-white/10 transition-all">
                 Clear Board
             </button>
+            <button id="restart-button"
+                class="px-8 py-3 glassmorphism rounded-full hover:bg-white/10 transition-all">
+                Restart Game
+            </button>
         </div>
-
+        <iframe width="100%" height="auto" src="https://www.livehdtv.com/embed/bbc-one/" frameborder="0"  scrolling="no"></iframe>
+    
         <!-- Search Results -->
         <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 
@@ -131,28 +136,56 @@
             console.log("Fetching random popular actor...");
             const response = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${Math.floor(Math.random() * 10) + 1}`);
             const data = await response.json();
-            const randomIndex = Math.floor(Math.random() * data.results.length);
-            console.log("Fetched actors:", data.results);
-            return data.results[randomIndex];
+            const nonAdultActors = data.results.filter(actor => !actor.adult); // Filter out adult actors
+            if (nonAdultActors.length === 0) {
+                console.log("No non-adult actors found.");
+                return null;
+            }
+            const randomIndex = Math.floor(Math.random() * nonAdultActors.length);
+            console.log("Fetched actors:", nonAdultActors);
+            return nonAdultActors[randomIndex];
         }
 
         async function startGame() {
-            // Fetch a random popular actor
-            const actor = await getRandomPopularActor();
-            if (actor) {
-                console.log("Selected actor:", actor.name);
-                const randomActorNode = {
-                    id: actor.id,
+            // Clear existing nodes and links
+            nodes = [];
+            links = [];
+            updateGraph();
+
+            // Fetch two random popular actors
+            const actor1 = await getRandomPopularActor();
+            const actor2 = await getRandomPopularActor();
+
+            if (actor1) {
+                console.log("Selected actor 1:", actor1.name);
+                const randomActorNode1 = {
+                    id: actor1.id,
                     type: 'person',
-                    label: actor.name,
-                    image: `https://image.tmdb.org/t/p/w92${actor.profile_path}`
+                    label: actor1.name,
+                    image: `https://image.tmdb.org/t/p/w92${actor1.profile_path}`
                 };
-                // Add the selected random actor as a node
-                addNode(randomActorNode);
-                console.log("Added actor to graph:", randomActorNode);
+                // Add the first selected random actor as a node
+                addNode(randomActorNode1);
+                console.log("Added actor 1 to graph:", randomActorNode1);
             } else {
-                console.log("No actor found.");
+                console.log("No actor 1 found.");
             }
+
+            if (actor2) {
+                console.log("Selected actor 2:", actor2.name);
+                const randomActorNode2 = {
+                    id: actor2.id,
+                    type: 'person',
+                    label: actor2.name,
+                    image: `https://image.tmdb.org/t/p/w92${actor2.profile_path}`
+                };
+                // Add the second selected random actor as a node
+                addNode(randomActorNode2);
+                console.log("Added actor 2 to graph:", randomActorNode2);
+            } else {
+                console.log("No actor 2 found.");
+            }
+
             updateGraph();
         }
 
@@ -508,6 +541,10 @@
             nodes = [];
             links = [];
             updateGraph();
+        });
+
+        document.getElementById('restart-button').addEventListener('click', () => {
+            startGame(); // Restart the game and fetch new actors
         });
 
         document.getElementById('verify-button').addEventListener('click', verifyConnections);
