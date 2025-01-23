@@ -259,8 +259,11 @@
     </div>
 
     <!-- Message Box -->
+    <div id="message-box-s" class="message-box">
+        Have fun mein schatz! &#x2665;<br/> -Love, Daena
+    </div>
     <div id="message-box" class="message-box">
-        Have fun Mein Schatz
+        PLACEHOLDER
     </div>
 
     <!-- Spotlight Effect -->
@@ -436,68 +439,73 @@
 
         // Modified updateGraph function for enhanced node styling
         function updateGraph() {
-            // Links with animated dash array
-            const link = container.selectAll(".link")
-                .data(links)
-                .join(
-                    enter => enter.append("line")
-                        .attr("class", "link")
-                        .attr("stroke-dasharray", "4 2")
-                );
+    // Links with animated dash array
+    const link = container.selectAll(".link")
+        .data(links)
+        .join(
+            enter => enter.append("line")
+                .attr("class", "link")
+                .attr("stroke-dasharray", "4 2")
+                .on("dblclick", function(event, d) {
+                    // Remove the link from the data structure
+                    links = links.filter(link => link !== d);
+                    updateGraph(); // Update the graph to reflect the changes
+                })
+        );
 
-            // Nodes with enhanced styling
-            const nodeGroups = container.selectAll(".node-group")
-                .data(nodes, d => d.id)
-                .join(
-                    enter => {
-                        const group = enter.append("g")
-                            .attr("class", "node-group")
-                            .call(d3.drag()
-                                .on("start", dragstarted)
-                                .on("drag", dragged)
-                                .on("end", dragended));
+    // Nodes with enhanced styling
+    const nodeGroups = container.selectAll(".node-group")
+        .data(nodes, d => d.id)
+        .join(
+            enter => {
+                const group = enter.append("g")
+                    .attr("class", "node-group")
+                    .call(d3.drag()
+                        .on("start", dragstarted)
+                        .on("drag", dragged)
+                        .on("end", dragended));
 
-                        // Glowing circle background
-                        group.append("circle")
-                            .attr("r", 32)
-                            .attr("class", "node-circle")
-                            .attr("fill", "rgba(0, 0, 0, 0.5)")
-                            .attr("stroke", "rgba(255, 255, 255, 0.3)")
-                            .attr("stroke-width", 1);
+                // Glowing circle background
+                group.append("circle")
+                    .attr("r", 32)
+                    .attr("class", "node-circle")
+                    .attr("fill", "rgba(0, 0, 0, 0.5)")
+                    .attr("stroke", "rgba(255, 255, 255, 0.3)")
+                    .attr("stroke-width", 1);
 
-                        // Image with mask
-                        group.append("image")
-                            .attr("xlink:href", d => d.image)
-                            .attr("x", -24)
-                            .attr("y", -24)
-                            .attr("width", 48)
-                            .attr("height", 48)
-                            .attr("clip-path", "circle(24px at center)");
+                // Image with mask
+                group.append("image")
+                    .attr("xlink:href", d => d.image)
+                    .attr("x", -24)
+                    .attr("y", -24)
+                    .attr("width", 48)
+                    .attr("height", 48)
+                    .attr("clip-path", "circle(24px at center)");
 
-                        // Text label with better visibility
-                        group.append("text")
-                            .attr("x", 40)
-                            .attr("y", 5)
-                            .attr("class", "mono-title")
-                            .attr("fill", "white")
-                            .attr("font-size", "12px")
-                            .attr("text-anchor", "start")
-                            .text(d => d.label);
+                // Text label with better visibility
+                group.append("text")
+                    .attr("x", 40)
+                    .attr("y", 5)
+                    .attr("class", "mono-title")
+                    .attr("fill", "white")
+                    .attr("font-size", "12px")
+                    .attr("text-anchor", "start")
+                    .text(d => d.label);
 
-                        group.on("contextmenu", (event, d) => {
-                            event.preventDefault();
-                            showContextMenu(event, d);
-                        });
+                group.on("contextmenu", (event, d) => {
+                    event.preventDefault();
+                    showContextMenu(event, d);
+                });
 
-                        return group;
-                    }
-                );
+                return group;
+            }
+        );
 
-            // Update simulation
-            simulation.nodes(nodes);
-            simulation.force("link").links(links);
-            simulation.alpha(1).restart();
-        }
+    // Update simulation
+    simulation.nodes(nodes);
+    simulation.force("link").links(links);
+    simulation.alpha(1).restart();
+}
 
         function ticked() {
             // Update link positions
@@ -537,7 +545,7 @@
             menu.classList.remove("hidden");
         }
 
-        async function verifyConnections() {
+        async function verifyConnections2() {
             for (const link of links) {
                 const source = nodes.find(node => node.id === link.source.id);
                 const target = nodes.find(node => node.id === link.target.id);
@@ -570,6 +578,51 @@
             }
             alert('All connections are valid!');
         }
+
+        async function verifyConnections() {
+    let allValid = true; // Flag to track if all connections are valid
+
+    for (const link of links) {
+        const source = nodes.find(node => node.id === link.source.id);
+        const target = nodes.find(node => node.id === link.target.id);
+        
+        if ((source.type === 'movie' && target.type === 'person') || 
+            (source.type === 'person' && target.type === 'movie')) {
+            
+            const movieNode = source.type === 'movie' ? source : target;
+            const personNode = source.type === 'person' ? source : target;
+
+            try {
+                const creditsResponse = await fetch(`https://api.themoviedb.org/3/movie/${movieNode.id}/credits?api_key=${TMDB_API_KEY}`);
+                if (!creditsResponse.ok) throw new Error('Failed to fetch credits');
+                
+                const creditsData = await creditsResponse.json();
+                
+                const isValid = creditsData.cast.some(person => person.id === Number(personNode.id)) || 
+                                creditsData.crew.some(person => person.id === Number(personNode.id));
+                
+                if (!isValid) {
+                    allValid = false; // Mark as invalid if any connection is not valid
+                    break; // Exit the loop early if we find an invalid connection
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                allValid = false; // Mark as invalid on error
+                break; // Exit the loop on error
+            }
+        }
+    }
+
+    // Show the message box with the result
+    const messageBox = document.getElementById('message-box');
+    messageBox.style.display = 'block';
+    messageBox.textContent = allValid ? 'All connections are valid!' : 'Some connections are invalid!';
+    
+    // Hide the message box after 3 seconds
+    setTimeout(() => {
+        messageBox.style.display = 'none'; // Hide after 3 seconds
+    }, 3000);
+}
 
         // Event Listeners
         document.addEventListener("click", (event) => {
@@ -760,7 +813,7 @@
 
                 if (clickCount === 3) {
                     // Show the message box
-                    const messageBox = document.getElementById('message-box');
+                    const messageBox = document.getElementById('message-box-s');
                     messageBox.style.display = 'block';
                     setTimeout(() => {
                         messageBox.style.display = 'none'; // Hide after 3 seconds
