@@ -40,6 +40,18 @@
             50% { opacity: 0.3; }
         }
 
+@keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.gradient-bg {
+    background: linear-gradient(-45deg, #000000, #2C343F,#556678, #00B021, #F27405);
+    background-size: 400% 400%;
+    animation: gradientFlow 15s ease infinite;
+}
+    
         body {
             background: #000;
             color: white;
@@ -148,9 +160,27 @@
                 stroke-dashoffset: 1000;
             }
         }
+
+        /* Message box styles */
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            z-index: 2000;
+            display: none; /* Initially hidden */
+            text-align: center;
+            font-size: 2rem;
+            animation: fade 1s forwards;
+        }
     </style>
 </head>
-<body class="relative">
+<body class="gradient-bg relative">
     <div class="film-grain"></div>
     <div class="scanline"></div>
 
@@ -168,7 +198,7 @@
         <div class="max-w-3xl mx-auto mb-12">
             <div class="glass rounded-full relative overflow-hidden group">
                 <input id="search-bar" type="text" 
-                    placeholder="DISCOVER CONNECTIONS..."
+                    placeholder="EXPLORE THE CINEWORLD..."
                     class="w-full bg-transparent px-8 py-6 text-lg focus:outline-none placeholder:text-gray-500">
                 <button id="search-button" 
                     class="absolute right-4 top-1/2 -translate-y-1/2 px-6 py-2 glass rounded-full opacity-70 hover:opacity-100 transition-all">
@@ -219,98 +249,103 @@
         </ul>
     </div>
 
+    <!-- Message Box -->
+    <div id="message-box" class="message-box">
+        Have fun Mein Schatz
+    </div>
+
     <script>
-         const TMDB_API_KEY = "dc90ecfc8713216c67ff4170bbb02591";
+        const TMDB_API_KEY = "dc90ecfc8713216c67ff4170bbb02591";
 
-let nodes = [];
-let links = [];
-let selectedNode = null;
-let connecting = false;
+        let nodes = [];
+        let links = [];
+        let selectedNode = null;
+        let connecting = false;
 
-const svg = d3.select("#graph-svg")
-    .attr("width", "100%")
-    .attr("height", "100%");
+        const svg = d3.select("#graph-svg")
+            .attr("width", "100%")
+            .attr("height", "100%");
 
-// Initialize zoom behavior
-const zoom = d3.zoom()
-    .scaleExtent([0.2, 2])
-    .on("zoom", (event) => {
-        container.attr("transform", event.transform);
-    });
+        // Initialize zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.2, 2])
+            .on("zoom", (event) => {
+                container.attr("transform", event.transform);
+            });
 
-svg.call(zoom);
-const container = svg.append("g");
+        svg.call(zoom);
+        const container = svg.append("g");
 
-const simulation = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d => d.id).distance(150))
-    .force("charge", d3.forceManyBody().strength(-300))
-    .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
-    .on("tick", ticked);
+        const simulation = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+            .on("tick", ticked);
 
         // New function to fetch a random popular actor
         async function getRandomPopularActor() {
-    console.log("Fetching random popular actor...");
-    const response = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${Math.floor(Math.random() * 10) + 1}`);
-    const data = await response.json();
-    const nonAdultActors = data.results.filter(actor => !actor.adult); // Filter out adult actors
-    if (nonAdultActors.length === 0) {
-        console.log("No non-adult actors found.");
-        return null;
-    }
-    const randomIndex = Math.floor(Math.random() * nonAdultActors.length);
-    console.log("Fetched actors:", nonAdultActors);
-    return nonAdultActors[randomIndex];
-}
+            console.log("Fetching random popular actor...");
+            const response = await fetch(`https://api.themoviedb.org/3/person/popular?api_key=${TMDB_API_KEY}&language=en-US&page=${Math.floor(Math.random() * 10) + 1}`);
+            const data = await response.json();
+            const nonAdultActors = data.results.filter(actor => !actor.adult); // Filter out adult actors
+            if (nonAdultActors.length === 0) {
+                console.log("No non-adult actors found.");
+                return null;
+            }
+            const randomIndex = Math.floor(Math.random() * nonAdultActors.length);
+            console.log("Fetched actors:", nonAdultActors);
+            return nonAdultActors[randomIndex];
+        }
 
-async function startGame() {
-    // Clear existing nodes and links
-    nodes = [];
-    links = [];
-    updateGraph();
+        async function startGame() {
+            // Clear existing nodes and links
+            nodes = [];
+            links = [];
+            updateGraph();
 
-    // Fetch two random popular actors
-    const actor1 = await getRandomPopularActor();
-    const actor2 = await getRandomPopularActor();
+            // Fetch two random popular actors
+            const actor1 = await getRandomPopularActor();
+            const actor2 = await getRandomPopularActor();
 
-    if (actor1) {
-        console.log("Selected actor 1:", actor1.name);
-        const randomActorNode1 = {
-            id: actor1.id,
-            type: 'person',
-            label: actor1.name,
-            image: `https://image.tmdb.org/t/p/w92${actor1.profile_path}`
-        };
-        // Add the first selected random actor as a node
-        addNode(randomActorNode1);
-        console.log("Added actor 1 to graph:", randomActorNode1);
-    } else {
-        console.log("No actor 1 found.");
-    }
+            if (actor1) {
+                console.log("Selected actor 1:", actor1.name);
+                const randomActorNode1 = {
+                    id: actor1.id,
+                    type: 'person',
+                    label: actor1.name,
+                    image: `https://image.tmdb.org/t/p/w92${actor1.profile_path}`
+                };
+                // Add the first selected random actor as a node
+                addNode(randomActorNode1);
+                console.log("Added actor 1 to graph:", randomActorNode1);
+            } else {
+                console.log("No actor 1 found.");
+            }
 
-    if (actor2) {
-        console.log("Selected actor 2:", actor2.name);
-        const randomActorNode2 = {
-            id: actor2.id,
-            type: 'person',
-            label: actor2.name,
-            image: `https://image.tmdb.org/t/p/w92${actor2.profile_path}`
-        };
-        // Add the second selected random actor as a node
-        addNode(randomActorNode2);
-        console.log("Added actor 2 to graph:", randomActorNode2);
-    } else {
-        console.log("No actor 2 found.");
-    }
+            if (actor2) {
+                console.log("Selected actor 2:", actor2.name);
+                const randomActorNode2 = {
+                    id: actor2.id,
+                    type: 'person',
+                    label: actor2.name,
+                    image: `https://image.tmdb.org/t/p/w92${actor2.profile_path}`
+                };
+                // Add the second selected random actor as a node
+                addNode(randomActorNode2);
+                console.log("Added actor 2 to graph:", randomActorNode2);
+            } else {
+                console.log("No actor 2 found.");
+            }
 
-    updateGraph();
-}
+            updateGraph();
+        }
 
-async function fetchResults(query) {
-    const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.results;
-}
+        async function fetchResults(query) {
+            const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            return data.results;
+        }
 
         // Modified function to render search results with enhanced styling
         function renderResults(results) {
@@ -352,40 +387,40 @@ async function fetchResults(query) {
 
         let lastNodePosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 }; // Initial position
 
-function addNode(item) {
-    // Check for duplicate nodes
-    const existingNode = nodes.find(node => node.id === item.id);
-    if (existingNode) {
-        console.log(`Node with ID ${item.id} already exists. Skipping addition.`);
-        return; // Skip adding the node if it already exists
-    }
+        function addNode(item) {
+            // Check for duplicate nodes
+            const existingNode = nodes.find(node => node.id === item.id);
+            if (existingNode) {
+                console.log(`Node with ID ${item.id} already exists. Skipping addition.`);
+                return; // Skip adding the node if it already exists
+            }
 
-    // Set the position of the new node close to the last node
-    item.x = lastNodePosition.x + (Math.random() - 0.5) * 100; // Random offset
-    item.y = lastNodePosition.y + (Math.random() - 0.5) * 100; // Random offset
+            // Set the position of the new node close to the last node
+            item.x = lastNodePosition.x + (Math.random() - 0.5) * 100; // Random offset
+            item.y = lastNodePosition.y + (Math.random() - 0.5) * 100; // Random offset
 
-    nodes.push(item);
-    lastNodePosition = { x: item.x, y: item.y }; // Update last node position
-    console.log("Node added:", item);
-    updateGraph();
-}
+            nodes.push(item);
+            lastNodePosition = { x: item.x, y: item.y }; // Update last node position
+            console.log("Node added:", item);
+            updateGraph();
+        }
 
-function addLink(source, target) {
-    // Check for duplicate connections
-    const existingLink = links.find(link => 
-        (link.source.id === source.id && link.target.id === target.id) ||
-        (link.source.id === target.id && link.target.id === source.id)
-    );
+        function addLink(source, target) {
+            // Check for duplicate connections
+            const existingLink = links.find(link => 
+                (link.source.id === source.id && link.target.id === target.id) ||
+                (link.source.id === target.id && link.target.id === source.id)
+            );
 
-    if (existingLink) {
-        console.log(`Connection between ${source.label} and ${target.label} already exists. Skipping addition.`);
-        return; // Skip adding the link if it already exists
-    }
+            if (existingLink) {
+                console.log(`Connection between ${source.label} and ${target.label} already exists. Skipping addition.`);
+                return; // Skip adding the link if it already exists
+            }
 
-    links.push({ source, target });
-    console.log("Link added between:", source.label, "and", target.label);
-    updateGraph();
-}
+            links.push({ source, target });
+            console.log("Link added between:", source.label, "and", target.label);
+            updateGraph();
+        }
 
         // Modified updateGraph function for enhanced node styling
         function updateGraph() {
@@ -437,12 +472,10 @@ function addLink(source, target) {
                             .attr("text-anchor", "start")
                             .text(d => d.label);
 
-                        
-                            group.on("contextmenu", (event, d) => {
+                        group.on("contextmenu", (event, d) => {
                             event.preventDefault();
                             showContextMenu(event, d);
                         });
-
 
                         return group;
                     }
@@ -694,6 +727,31 @@ function addLink(source, target) {
 
         // Initialize the game
         startGame();
+
+        // Triple click detection
+        let clickCount = 0;
+        let clickTimeout;
+
+        document.addEventListener('click', (event) => {
+            // Check if the click is on the right side of the viewport
+            if (event.clientX > window.innerWidth / 2) {
+                clickCount++;
+                clearTimeout(clickTimeout);
+                clickTimeout = setTimeout(() => {
+                    clickCount = 0; // Reset click count after a timeout
+                }, 300); // 300ms timeout for triple click detection
+
+                if (clickCount === 3) {
+                    // Show the message box
+                    const messageBox = document.getElementById('message-box');
+                    messageBox.style.display = 'block';
+                    setTimeout(() => {
+                        messageBox.style.display = 'none'; // Hide after 3 seconds
+                    }, 3000);
+                    clickCount = 0; // Reset click count
+                }
+            }
+        });
     </script>
 </body>
 </html>
