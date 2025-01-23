@@ -754,15 +754,17 @@
             }
         });
 
-        document.getElementById('search-bar').addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
-                const query = e.target.value;
-                if (query) {
-                    const results = await fetchResults(query);
-                    renderResults(results);
-                }
-            }
-        });
+        document.getElementById('search-button').addEventListener('click', async () => {
+    const query = document.getElementById('search-bar').value;
+    if (query) {
+        const results = await fetchResults(query);
+        renderResults(results);
+
+        // Scroll to the results container
+        const resultsContainer = document.getElementById('results');
+        resultsContainer.scrollIntoView({ behavior: 'smooth' }); // Smooth scroll to the results
+    }
+});
 
         document.getElementById('results').addEventListener('click', event => {
             if (event.target.classList.contains('add-button')) {
